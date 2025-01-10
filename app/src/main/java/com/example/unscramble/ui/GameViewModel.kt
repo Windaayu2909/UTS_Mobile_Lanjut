@@ -19,7 +19,9 @@ package com.example.unscramble.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.saveable
 import com.example.unscramble.data.MAX_NO_OF_WORDS
 import com.example.unscramble.data.SCORE_INCREASE
 import com.example.unscramble.data.allWords
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.io.File
 
 /**
  * ViewModel containing the app data and methods to process the data
@@ -127,6 +130,40 @@ class GameViewModel : ViewModel() {
             tempWord.shuffle()
         }
         return String(tempWord)
+    }
+
+    class SavedStateViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel() {
+
+        var filteredData: List<String> by savedStateHandle.saveable {
+            mutableStateOf(emptyList())
+        }
+
+        fun setQuery(query: String) {
+            withMutableSnapshot {
+                filteredData += query
+            }
+        }
+    }
+
+    private fun File.saveTempFile() = bundleOf("path", absolutePath)
+
+    class TempFileViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
+        private var tempFile: File? = null
+        init {
+            savedStateHandle.setSavedStateProvider("temp_file") { // saveState()
+                if (tempFile != null) {
+                    tempFile.saveTempFile()
+                } else {
+                    Bundle()
+                }
+            }
+        }
+
+        fun createOrGetTempFile(): File {
+            return tempFile ?: File.createTempFile("temp", null).also {
+                tempFile = it
+            }
+        }
     }
 
     private fun pickRandomWordAndShuffle(): String {
